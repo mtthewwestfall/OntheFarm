@@ -82,9 +82,21 @@ CREATE TABLE IF NOT EXISTS sales (
   item TEXT NOT NULL, quantity INTEGER DEFAULT 1, unit TEXT DEFAULT '',
   per_unit INTEGER, amount_cents INTEGER NOT NULL, customer TEXT DEFAULT '',
   status TEXT NOT NULL DEFAULT 'paid', paid_date TEXT, notes TEXT DEFAULT '');
+CREATE TABLE IF NOT EXISTS tab_labels (
+  farm_id TEXT NOT NULL, tab TEXT NOT NULL, label TEXT NOT NULL,
+  PRIMARY KEY (farm_id, tab));
 CREATE INDEX IF NOT EXISTS idx_tasks_farm ON tasks(farm_id);
 CREATE INDEX IF NOT EXISTS idx_photos_project ON photos(project_id);
 """
+
+# canonical tab ids -> default labels (shown in the tab bar)
+TAB_DEFAULTS = {
+    "tasks": "Tasks", "crops": "Crops", "animals": "Animals",
+    "feeding": "Feeding", "expenses": "Expenses",
+    "sales": "Gracie's sales corner", "goals": "Goals",
+    "projects": "Projects", "shop": "Leroy's feed/parts store",
+    "offthefarm": "OfftheFARM", "farm": "Farm & Members",
+}
 
 # field kinds: str, date, int, num, bool, money, times, enum:a|b, ref:table
 RESOURCES = {
@@ -337,7 +349,7 @@ def _load_user():
     return dict(r) if r else None
 
 
-GUEST_ENDPOINTS = {"me", "guide", "schedule_json"}
+GUEST_ENDPOINTS = {"me", "guide", "schedule_json", "get_tab_labels"}
 
 
 def login_required(fn):
@@ -466,6 +478,49 @@ def update_farm():
                    (str(d["sitter_notes"])[:5000], g.user["farm_id"]))
     db.commit()
     return jsonify(ok=True)
+
+
+# ---------------- tab labels ----------------
+
+def _tab_labels(farm_id: str) -> dict:
+    labels = dict(TAB_DEFAULTS)
+    rows = _db().execute("SELECT tab, label FROM tab_labels WHERE farm_id=?",
+                         (farm_id,)).fetchall()
+    for r in rows:
+        if r["tab"] in labels:
+            labels[r["tab"]] = r["label"]
+    return labels
+
+
+@app.get("/api/tab-labels")
+@login_required
+def get_tab_labels():
+    return jsonify(_tab_labels(g.user["farm_id"]))
+
+
+@app.put("/api/tab-labels")
+@login_required
+def put_tab_labels():
+    d = _body()
+    labels = d.get("labels")
+    if not isinstance(labels, dict):
+        raise BadRequest("labels must be an object of tab ids to names")
+    db = _db()
+    for tab, label in labels.items():
+        if tab not in TAB_DEFAULTS:
+            raise BadRequest(f"Unknown tab: {tab}")
+        name = str(label or "").strip()
+        if len(name) > 40:
+            raise BadRequest("Tab names must be 40 characters or fewer")
+        if name:
+            db.execute("INSERT INTO tab_labels (farm_id, tab, label) VALUES (?,?,?)"
+                       " ON CONFLICT(farm_id, tab) DO UPDATE SET label=excluded.label",
+                       (g.user["farm_id"], tab, name))
+        else:
+            db.execute("DELETE FROM tab_labels WHERE farm_id=? AND tab=?",
+                       (g.user["farm_id"], tab))
+    db.commit()
+    return jsonify(_tab_labels(g.user["farm_id"]))
 
 
 # ---------------- invites / members ----------------

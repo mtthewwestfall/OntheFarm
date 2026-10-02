@@ -22,13 +22,14 @@ function toast(msg, bad = false) {
 }
 const fail = (e) => toast(e.message || String(e), true);
 
-const S = {me: null, tab: localStorage.getItem("otf_tab") || "tasks", taskFilter: "open", saleFilter: "all", animals: [], projects: []};
+const S = {me: null, tab: localStorage.getItem("otf_tab") || "tasks", tabLabels: {}, taskFilter: "open", saleFilter: "all", animals: [], projects: []};
 
 const TABS = [
   ["tasks", "Tasks"], ["crops", "Crops"], ["animals", "Animals"], ["feeding", "Feeding"],
   ["expenses", "Expenses"], ["sales", "Gracie's sales corner"], ["goals", "Goals"], ["projects", "Projects"],
-  ["shop", "Shop"], ["offthefarm", "OfftheFARM"], ["farm", "Farm & Members"],
+  ["shop", "Leroy's feed/parts store"], ["offthefarm", "OfftheFARM"], ["farm", "Farm & Members"],
 ];
+const tabLabel = (k) => S.tabLabels[k] || (TABS.find((t) => t[0] === k) || [k, k])[1];
 const isGuest = () => S.me && S.me.user.role === "guest";
 const visibleTabs = () => isGuest() ? TABS.filter(([k]) => k === "offthefarm") : TABS;
 
@@ -208,7 +209,7 @@ const VIEWS = {
     const tasks = await api("/api/tasks");
     const f = S.taskFilter;
     const shown = tasks.filter((t) => f === "all" || (f === "open" ? !t.done : t.done));
-    v.innerHTML = `<div class="bar"><h2>Tasks</h2><div class="filters">
+    v.innerHTML = `<div class="bar"><h2>${esc(tabLabel("tasks"))}</h2><div class="filters">
       ${["open", "done", "all"].map((k) => `<button data-f="${k}" class="${f === k ? "active" : ""}">${k[0].toUpperCase() + k.slice(1)}</button>`).join("")}
       ${addBtn("Task", "tasks")}</div></div>${taskTable(shown)}`;
     v.querySelectorAll("[data-f]").forEach((b) => b.onclick = () => { S.taskFilter = b.dataset.f; render(); });
@@ -216,7 +217,7 @@ const VIEWS = {
   },
   async crops(v) {
     const crops = await api("/api/crops");
-    v.innerHTML = `<div class="bar"><h2>Crops</h2>${addBtn("Planting", "crops")}</div>` + (crops.length ? `<div class="wrap"><table class="list"><thead><tr>
+    v.innerHTML = `<div class="bar"><h2>${esc(tabLabel("crops"))}</h2>${addBtn("Planting", "crops")}</div>` + (crops.length ? `<div class="wrap"><table class="list"><thead><tr>
       <th>Crop</th><th>Planted</th><th>Expected harvest</th><th>Status</th><th>Area</th><th>Notes</th><th></th></tr></thead><tbody>
       ${crops.map((c) => `<tr><td><b>${esc(c.crop)}</b>${c.variety ? `<div class="muted">${esc(c.variety)}</div>` : ""}</td><td>${fmtDate(c.planted_date)}</td>
       <td>${fmtDate(c.expected_harvest)}</td><td><span class="badge">${esc(c.status)}</span></td><td>${esc(c.area)}</td><td>${esc(c.notes)}</td>${rowActions("crops", c.id)}</tr>`).join("")}
@@ -226,7 +227,7 @@ const VIEWS = {
   async animals(v) {
     const animals = S.animals;
     const total = animals.reduce((n, a) => n + (a.head_count || 0), 0);
-    v.innerHTML = `<div class="bar"><h2>Animals <span class="muted" style="font-size:15px">${total} head</span></h2>${addBtn("Animal group", "animals")}</div>` + (animals.length ? `<div class="wrap"><table class="list"><thead><tr>
+    v.innerHTML = `<div class="bar"><h2>${esc(tabLabel("animals"))} <span class="muted" style="font-size:15px">${total} head</span></h2>${addBtn("Animal group", "animals")}</div>` + (animals.length ? `<div class="wrap"><table class="list"><thead><tr>
       <th>Animal</th><th>Head</th><th>Location / pasture</th><th>Special instructions</th><th>Health notes</th><th></th></tr></thead><tbody>
       ${animals.map((a) => `<tr><td><b>${esc(a.name || a.species)}</b><div class="muted">${esc(a.name ? animalKind(a) : a.breed)}</div></td><td>${a.head_count ?? ""}</td>
       <td>${esc(a.location)}</td><td>${multiline(a.special_instructions)}</td><td>${multiline(a.health_notes)}</td>${rowActions("animals", a.id)}</tr>`).join("")}</tbody></table></div>` : empty("No animals yet."));
@@ -236,7 +237,7 @@ const VIEWS = {
     const [feedings, sched] = await Promise.all([api("/api/feedings"), api("/api/schedule")]);
     const byId = Object.fromEntries(S.animals.map((a) => [a.id, a]));
     const tl = sched.timed.map((t) => `<tr><td><b>${esc(fmtTime(t.time))}</b></td><td>${esc(t.animal)}</td><td>${esc(t.feed_type)}</td><td>${esc(t.amount)}</td></tr>`).join("");
-    v.innerHTML = `<div class="bar"><h2>Feeding schedule</h2><div class="filters">
+    v.innerHTML = `<div class="bar"><h2>${esc(tabLabel("feeding"))}</h2><div class="filters">
         <a href="/schedule/print" target="_blank"><button>Print / PDF</button></a>${addBtn("Feeding", "feedings")}</div></div>
       <p class="muted">Going out of town? Print the schedule, or invite your sitter free as a guest — they'll see the OfftheFARM instructions in the app.</p>
       ${feedings.length ? `<div class="wrap"><table class="list"><thead><tr><th>Animal</th><th>Feed</th><th>Amount</th><th>When</th><th>Special instructions</th><th></th></tr></thead><tbody>
@@ -250,7 +251,7 @@ const VIEWS = {
     const [items, months] = await Promise.all([api("/api/expenses"), api("/api/expense-summary")]);
     const thisMonth = today().slice(0, 7);
     const cur = months.find((m) => m.month === thisMonth);
-    v.innerHTML = `<div class="bar"><h2>Expenses</h2>${addBtn("Expense", "expenses")}</div>
+    v.innerHTML = `<div class="bar"><h2>${esc(tabLabel("expenses"))}</h2>${addBtn("Expense", "expenses")}</div>
       <div class="stats">${months.slice(0, 6).map((m) => `<div class="stat"><div class="k">${esc(monthName(m.month))}${m.month === thisMonth ? " (this month)" : ""}</div>
         <div class="v">${money(m.total)}</div><div class="s">${Object.entries(m.by_category).slice(0, 3).map(([k, x]) => `${esc(k)} ${money(x)}`).join(" · ")}</div></div>`).join("") ||
         `<div class="stat"><div class="k">This month</div><div class="v">${money(0)}</div></div>`}</div>
@@ -266,7 +267,7 @@ const VIEWS = {
     const shown = items.filter((s) => f === "all" || s.status === f);
     const stat = (k, p) => `<div class="stat"><div class="k">${k}</div><div class="v">${money(p.total)}</div>
       <div class="s">${money(p.paid)} paid · <span class="${p.pending ? "overdue" : ""}">${money(p.pending)} pending</span> · ${p.count} sale${p.count === 1 ? "" : "s"}</div></div>`;
-    v.innerHTML = `<div class="bar"><h2>Gracie's sales corner</h2>${addBtn("Sale", "sales")}</div>
+    v.innerHTML = `<div class="bar"><h2>${esc(tabLabel("sales"))}</h2>${addBtn("Sale", "sales")}</div>
       <div class="stats">${stat("This week", sum.week)}${stat("This month", sum.month)}${stat("This year", sum.year)}
       <div class="stat"><div class="k">Still owed</div><div class="v ${sum.owed_total ? "overdue" : ""}">${money(sum.owed_total)}</div><div class="s">${sum.owed.length} customer${sum.owed.length === 1 ? "" : "s"}</div></div></div>
       ${sum.owed.length ? `<div class="card"><b>Who still owes</b><table class="list" style="margin-top:8px"><thead><tr><th>Customer</th><th>Owes</th><th>Sales</th><th>Oldest</th></tr></thead><tbody>
@@ -283,13 +284,13 @@ const VIEWS = {
   },
   async goals(v) {
     const goals = await api("/api/goals");
-    v.innerHTML = `<div class="bar"><h2>Goals</h2>${addBtn("Goal", "goals")}</div>` + (goals.length ? `<div class="grid">${goals.map(goalCard).join("")}</div>` : empty("No goals yet. Track progress on a project or money saved toward one."));
+    v.innerHTML = `<div class="bar"><h2>${esc(tabLabel("goals"))}</h2>${addBtn("Goal", "goals")}</div>` + (goals.length ? `<div class="grid">${goals.map(goalCard).join("")}</div>` : empty("No goals yet. Track progress on a project or money saved toward one."));
     bindGoals(v, goals);
   },
   async projects(v) {
     if (S.projectId) return projectDetail(v, S.projectId);
     const projects = S.projects;
-    v.innerHTML = `<div class="bar"><h2>Projects</h2>${addBtn("Project", "projects")}</div>` + (projects.length ? `<div class="grid">${projects.map((p) => `<div class="card">
+    v.innerHTML = `<div class="bar"><h2>${esc(tabLabel("projects"))}</h2>${addBtn("Project", "projects")}</div>` + (projects.length ? `<div class="grid">${projects.map((p) => `<div class="card">
       <h3 style="margin:0 0 6px">${esc(p.name)}</h3><p class="muted" style="margin:0 0 10px">${esc((p.description || "").slice(0, 140))}</p>
       <button class="primary small" data-open="${p.id}">Open</button></div>`).join("")}</div>` : empty("No projects yet. Snap a photo of where you want to build and see what it'll look like."));
     v.querySelectorAll("[data-open]").forEach((b) => b.onclick = () => { S.projectId = Number(b.dataset.open); render(); });
@@ -297,7 +298,7 @@ const VIEWS = {
   },
   async shop(v) {
     const s = S.shop || {query: "", category: "feed"};
-    v.innerHTML = `<div class="bar"><h2>Shop</h2></div>
+    v.innerHTML = `<div class="bar"><h2>${esc(tabLabel("shop"))}</h2></div>
       <div class="card"><form id="shopForm"><div class="row">
         <label>What do you need?<input name="query" required value="${esc(s.query)}" placeholder="50 lb layer feed, PTO shaft for a 5 ft bush hog, T-posts…"></label>
         <label>Category<select name="category">${[["feed", "Feed & hay"], ["parts", "Parts"], ["tools", "Tools & equipment"], ["materials", "Building materials"]].map(([k, t]) => `<option value="${k}"${k === s.category ? " selected" : ""}>${t}</option>`).join("")}</select></label></div>
@@ -320,7 +321,7 @@ const VIEWS = {
   async offthefarm(v) {
     const gd = await api("/api/guide");
     const when = (f) => f.times ? f.times.split(", ").map(fmtTime).join(", ") : `${f.times_per_day || 1}× a day`;
-    v.innerHTML = `<div class="bar"><h2>OfftheFARM instructions</h2><a href="/schedule/print" target="_blank"><button>Print / PDF</button></a></div>
+    v.innerHTML = `<div class="bar"><h2>${esc(tabLabel("offthefarm"))} instructions</h2><a href="/schedule/print" target="_blank"><button>Print / PDF</button></a></div>
       <p class="muted">Everything whoever watches ${esc(gd.farm_name)} needs: who eats what, when, and anything special.${gd.owner ? ` Questions? Contact ${esc(gd.owner.name || "the owner")} at <a href="mailto:${esc(gd.owner.email)}">${esc(gd.owner.email)}</a>.` : ""}</p>
       ${!isGuest() ? `<p class="muted">Built from your Animals and Feeding entries. Invite a guest for free from Farm &amp; Members so they can view this in the app.</p>` : ""}
       ${gd.sitter_notes ? `<div class="advice" style="margin-bottom:12px"><b>Notes from the farm</b>\n${esc(gd.sitter_notes)}</div>` : ""}
@@ -340,9 +341,12 @@ const VIEWS = {
     v.innerHTML = `<div class="bar"><h2>${esc(S.me.user.farm_name)}</h2></div>
       <div class="card"><form id="farmForm">
         ${owner ? `<label>Farm name<input name="name" value="${esc(S.me.user.farm_name)}" required></label>` : ""}
-        <label>Location (town or ZIP — used by Shop to find nearby stores)<input name="location" value="${esc(S.me.location)}" placeholder="Medina, OH 44256"></label>
+        <label>Location (town or ZIP — used by the supplies search to find nearby stores)<input name="location" value="${esc(S.me.location)}" placeholder="Medina, OH 44256"></label>
         <label>Notes for the farm sitter (printed on the feeding schedule)<textarea name="sitter_notes" placeholder="Vet: Dr. Lee 555-0100. Gate code 1234. Water trough heater plug is by the barn door.">${esc(S.me.sitter_notes)}</textarea></label>
         <button class="primary">Save</button></form></div>
+      <div class="card"><h3 style="margin-top:0">Tab names</h3>
+        <p class="muted">Rename any tab — new names show for everyone on this farm. Clear a name to reset it.</p>
+        <button class="small" id="renameTabsBtn">Rename tabs</button></div>
       <div class="card"><h3 style="margin-top:0">Farm members</h3>
         <p class="muted">Inviting is free. Members see and update everything on this farm. Guests only see the OfftheFARM instructions.</p>
         <table class="list"><tbody>${members.map((m) => `<tr><td>${esc(m.name || m.email)}<div class="muted">${esc(m.email)}</div></td><td><span class="badge">${m.role}</span></td>
@@ -358,6 +362,22 @@ const VIEWS = {
       ev.preventDefault();
       const body = Object.fromEntries(new FormData(ev.target));
       try { await api("/api/farm", {method: "PUT", body}); await loadMe(); toast("Saved"); render(); } catch (e) { fail(e); }
+    };
+    $("#renameTabsBtn").onclick = () => {
+      const vals = {};
+      TABS.forEach(([k]) => { vals[`tab_${k}`] = tabLabel(k); });
+      openForm("Rename tabs",
+        TABS.map(([k, t]) => ({name: `tab_${k}`, label: `“${t}” shows as`})),
+        vals,
+        async (d) => {
+          const labels = {};
+          TABS.forEach(([k]) => {
+            const v = String(d[`tab_${k}`] || "").trim();
+            if (v !== tabLabel(k)) labels[k] = v;
+          });
+          S.tabLabels = await api("/api/tab-labels", {method: "PUT", body: {labels}});
+          toast("Tab names saved");
+        });
     };
     const inv = $("#inviteForm");
     if (inv) inv.onsubmit = async (ev) => {
@@ -505,13 +525,17 @@ function shrink(file, max = 1600) {
 async function refreshShared() {
   [S.animals, S.projects] = await Promise.all([api("/api/animals"), api("/api/projects")]);
 }
-async function loadMe() { S.me = await api("/api/me"); $("#farmName").textContent = S.me.user.farm_name; }
+async function loadMe() {
+  S.me = await api("/api/me");
+  $("#farmName").textContent = S.me.user.farm_name;
+  try { S.tabLabels = await api("/api/tab-labels"); } catch (_) { S.tabLabels = {}; }
+}
 
 async function render() {
   const v = $("#view");
   const tabs = visibleTabs();
   if (!tabs.some(([k]) => k === S.tab)) S.tab = tabs[0][0];
-  $("#tabs").innerHTML = tabs.map(([k, t]) => `<button data-tab="${k}" class="${S.tab === k ? "active" : ""}">${t}</button>`).join("");
+  $("#tabs").innerHTML = tabs.map(([k]) => `<button data-tab="${k}" class="${S.tab === k ? "active" : ""}">${esc(tabLabel(k))}</button>`).join("");
   $("#tabs").querySelectorAll("[data-tab]").forEach((b) => b.onclick = () => { S.tab = b.dataset.tab; S.projectId = null; localStorage.setItem("otf_tab", S.tab); render(); });
   try { if (!isGuest()) await refreshShared(); await (VIEWS[S.tab] || VIEWS.tasks)(v); }
   catch (e) { if (S.me) v.innerHTML = `<div class="empty error">${esc(e.message)}</div>`; }

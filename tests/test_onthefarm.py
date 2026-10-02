@@ -369,3 +369,36 @@ def test_parse_times():
     assert server.parse_times("12am") == ["00:00"]
     with pytest.raises(server.BadRequest):
         server.parse_times("noonish")
+
+
+def test_tab_labels_defaults_and_rename(owner):
+    labels = owner.get("/api/tab-labels").get_json()
+    assert labels["shop"] == "Leroy's feed/parts store"
+    assert labels["sales"] == "Gracie's sales corner"
+    assert len(labels) == 11
+    r = owner.put("/api/tab-labels", json={"labels": {"shop": "Feed Barn", "tasks": "  Chores  "}})
+    assert r.status_code == 200
+    labels = r.get_json()
+    assert labels["shop"] == "Feed Barn" and labels["tasks"] == "Chores"
+    assert owner.get("/api/tab-labels").get_json()["shop"] == "Feed Barn"
+
+
+def test_tab_labels_reset_and_validation(owner):
+    owner.put("/api/tab-labels", json={"labels": {"shop": "Feed Barn"}})
+    r = owner.put("/api/tab-labels", json={"labels": {"shop": "   "}})
+    assert r.get_json()["shop"] == "Leroy's feed/parts store"
+    assert owner.put("/api/tab-labels", json={"labels": {"nope": "x"}}).status_code == 400
+    assert owner.put("/api/tab-labels", json={"labels": {"shop": "x" * 41}}).status_code == 400
+    assert owner.put("/api/tab-labels", json={"labels": "nope"}).status_code == 400
+    assert owner.put("/api/tab-labels", json={}).status_code == 400
+
+
+def test_tab_labels_guest_and_farm_scoping(app, owner):
+    inv = owner.post("/api/invites", json={"role": "guest"}).get_json()
+    gst = signup(client(app), email="guest@farm.test", invite=inv["token"])
+    assert gst.get("/api/tab-labels").get_json()["shop"] == "Leroy's feed/parts store"
+    assert gst.put("/api/tab-labels", json={"labels": {"shop": "x"}}).status_code == 403
+    assert client(app).get("/api/tab-labels").status_code == 401
+    owner.put("/api/tab-labels", json={"labels": {"shop": "Farm One Store"}})
+    other = signup(client(app), email="other@farm.test", farm_name="Second Farm")
+    assert other.get("/api/tab-labels").get_json()["shop"] == "Leroy's feed/parts store"
