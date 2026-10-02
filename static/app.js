@@ -531,6 +531,173 @@ async function loadMe() {
   try { S.tabLabels = await api("/api/tab-labels"); } catch (_) { S.tabLabels = {}; }
 }
 
+/* ---------- timers & feeding reminders ---------- */
+S.timers = [];
+S.firedTimers = new Set();
+S.feedRemind = localStorage.getItem("otf_feed_remind") === "1";
+
+function beep(n = 3) {
+  try {
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return;
+    const ctx = new C();
+    let t = ctx.currentTime + 0.05;
+    for (let i = 0; i < n; i++) {
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.connect(g); g.connect(ctx.destination);
+      o.type = "sine"; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.001, t);
+      g.gain.exponentialRampToValueAtTime(0.4, t + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+      o.start(t); o.stop(t + 0.45);
+      t += 0.55;
+    }
+  } catch (_) {}
+}
+
+async function ensureNotify() {
+  if (!("Notification" in window)) { toast("This browser doesn't support notifications"); return false; }
+  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "denied") { toast("Notifications are blocked — allow them in browser settings for alerts", true); return false; }
+  return (await Notification.requestPermission()) === "granted";
+}
+function sysNotify(title, body) {
+  if ("Notification" in window && Notification.permission === "granted") {
+    try { new Notification(title, {body}); } catch (_) {}
+  }
+}
+
+let alertEl = null;
+function dismissAlert() { if (alertEl) { alertEl.remove(); alertEl = null; } }
+function showAlert(title, body, actions) {
+  dismissAlert();
+  alertEl = document.createElement("div");
+  alertEl.className = "timer-alert";
+  alertEl.innerHTML = `<div><b>${esc(title)}</b>${body ? `<div class="muted">${esc(body)}</div>` : ""}</div><div class="timer-alert-btns"></div>`;
+  const btns = alertEl.querySelector(".timer-alert-btns");
+  for (const a of actions) {
+    const b = document.createElement("button");
+    b.className = "small" + (a.primary ? " primary" : "");
+    b.textContent = a.label;
+    b.onclick = async () => { try { await a.fn(); } catch (e) { fail(e); } dismissAlert(); };
+    btns.appendChild(b);
+  }
+  document.body.appendChild(alertEl);
+  beep();
+}
+
+function updateBell() {
+  const n = S.timers.length, b = $("#bellBadge");
+  b.textContent = n || "";
+  b.style.display = n ? "inline-block" : "none";
+}
+
+const fmtCountdown = (ms) => {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h ? `in ${h}h ${m}m` : (m ? `in ${m}m ${s % 60}s` : `in ${s}s`);
+};
+
+async function openTimers() {
+  const dlg = $("#dlg"), form = $("#dlgForm");
+  form.onsubmit = null;
+  const paint = async () => {
+    let timers = [];
+    try { timers = await api("/api/timers"); }
+    catch (e) { form.innerHTML = `<h3>⏰ Timers & reminders</h3><p class="empty error">${esc(e.message)}</p>`; return; }
+    S.timers = timers; updateBell();
+    form.innerHTML = `<h3>⏰ Timers & reminders</h3>
+      <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="frChk" style="width:auto"${S.feedRemind ? " checked" : ""}> Remind me at feeding times</label>
+      <p class="muted" style="margin:4px 0 0">Uses your feeding schedule. Alerts while the app is open in your browser.</p>
+      <h4 style="margin:14px 0 6px">Active timers</h4>
+      ${timers.length ? timers.map((t) => `<div class="copy" style="margin-bottom:6px"><div><b>${esc(t.label)}</b><div class="muted">${fmtCountdown(t.target_at * 1000 - Date.now())} · ${esc(new Date(t.target_at * 1000).toLocaleTimeString(undefined, {hour: "numeric", minute: "2-digit"}))}</div></div>
+        <button type="button" class="small danger" data-cancel="${t.id}">Cancel</button></div>`).join("")
+        : `<p class="muted">No timers running.</p>`}
+      <h4 style="margin:14px 0 6px">New timer</h4>
+      <div class="row"><label>Label<input id="ntLabel" placeholder="Check the chicks" maxlength="100"></label></div>
+      <div class="row"><label>Minutes from now<input id="ntMin" type="number" min="1" max="10080" placeholder="30"></label>
+      <label>Or at time<input id="ntAt" type="time"></label></div>
+      <p class="error" id="dlgErr"></p>
+      <div class="dlg-actions"><button type="button" id="dlgClose">Close</button><button type="button" class="primary" id="ntSet">Set timer</button></div>`;
+    $("#frChk").onchange = async (ev) => {
+      if (ev.target.checked) {
+        if (await ensureNotify()) { S.feedRemind = true; localStorage.setItem("otf_feed_remind", "1"); toast("Feeding reminders on"); }
+        else ev.target.checked = false;
+      } else {
+        S.feedRemind = false; localStorage.removeItem("otf_feed_remind"); toast("Feeding reminders off");
+      }
+    };
+    form.querySelectorAll("[data-cancel]").forEach((b) => b.onclick = async () => {
+      await api(`/api/timers/${b.dataset.cancel}`, {method: "DELETE"}).catch(fail);
+      paint();
+    });
+    $("#dlgClose").onclick = () => dlg.close();
+    $("#ntSet").onclick = async () => {
+      const body = {label: $("#ntLabel").value.trim()};
+      if ($("#ntMin").value) body.minutes = Number($("#ntMin").value);
+      else if ($("#ntAt").value) body.at = $("#ntAt").value;
+      else { $("#dlgErr").textContent = "Enter minutes or a time."; return; }
+      $("#ntSet").disabled = true;
+      try {
+        await ensureNotify();
+        await api("/api/timers", {method: "POST", body});
+        toast("Timer set");
+        paint();
+      } catch (e) { $("#dlgErr").textContent = e.message; }
+      finally { const b = $("#ntSet"); if (b) b.disabled = false; }
+    };
+  };
+  await paint();
+  dlg.showModal();
+}
+
+async function checkFeedings(now) {
+  let feedings = [];
+  try { feedings = await api("/api/feedings"); } catch (_) { return; }
+  const day = new Date(now).toISOString().slice(0, 10);
+  for (const f of feedings) {
+    const times = String(f.times || "").split(",").map((s) => s.trim()).filter((s) => /^\d{2}:\d{2}$/.test(s));
+    if (!times.length) continue;
+    const animal = (S.animals || []).find((a) => String(a.id) === String(f.animal_id));
+    const who = animal ? animalName(animal) : "Animals";
+    for (const tm of times) {
+      const [hh, mm] = tm.split(":").map(Number);
+      const dt = new Date(now); dt.setHours(hh, mm, 0, 0);
+      const key = `otf_fr_${f.id}_${tm}_${day}`;
+      if (dt.getTime() <= now && now - dt.getTime() < 120000 && !localStorage.getItem(key)) {
+        localStorage.setItem(key, "1");
+        const msg = `${who} — ${f.feed_type} (${f.amount})`;
+        sysNotify("🍽️ Feeding time", msg);
+        showAlert("🍽️ Feeding time", msg, [{label: "Done", primary: true, fn: async () => {}}]);
+      }
+    }
+  }
+}
+
+async function pollReminders() {
+  if (!S.me || isGuest()) return;
+  try { S.timers = await api("/api/timers"); }
+  catch (_) { return; }
+  updateBell();
+  const now = Date.now();
+  for (const t of S.timers) {
+    if (t.target_at * 1000 <= now && !S.firedTimers.has(t.id)) {
+      S.firedTimers.add(t.id);
+      sysNotify("⏰ " + t.label, "Timer finished");
+      showAlert("⏰ " + t.label, "Your timer finished.", [
+        {label: "Snooze 10 min", fn: async () => {
+          await api(`/api/timers/${t.id}/dismiss`, {method: "POST"}).catch(() => {});
+          await api("/api/timers", {method: "POST", body: {label: t.label, minutes: 10}});
+        }},
+        {label: "Done", primary: true, fn: async () => {
+          await api(`/api/timers/${t.id}/dismiss`, {method: "POST"}).catch(() => {});
+        }},
+      ]);
+    }
+  }
+  if (S.feedRemind) await checkFeedings(now);
+}
+
 async function render() {
   const v = $("#view");
   const tabs = visibleTabs();
@@ -551,11 +718,13 @@ function setMode(m) {
   $("#authForm").elements.password.autocomplete = m === "signup" ? "new-password" : "current-password";
 }
 function showAuth() {
-  S.me = null; $("#app").classList.add("hidden"); $("#logoutBtn").classList.add("hidden"); $("#auth").classList.remove("hidden"); $("#farmName").textContent = "";
+  S.me = null; $("#app").classList.add("hidden"); $("#logoutBtn").classList.add("hidden"); $("#bellBtn").classList.add("hidden"); $("#auth").classList.remove("hidden"); $("#farmName").textContent = "";
 }
 async function showApp() {
   await loadMe();
   $("#auth").classList.add("hidden"); $("#app").classList.remove("hidden"); $("#logoutBtn").classList.remove("hidden");
+  $("#bellBtn").classList.remove("hidden");
+  if (!S._pollStarted) { S._pollStarted = true; setInterval(pollReminders, 30000); pollReminders(); }
   render();
 }
 
@@ -572,6 +741,7 @@ $("#authForm").onsubmit = async (ev) => {
   } catch (e) { $("#authError").textContent = e.message; }
 };
 $("#logoutBtn").onclick = () => api("/api/logout", {method: "POST"}).finally(showAuth);
+$("#bellBtn").onclick = openTimers;
 
 (async function boot() {
   if (inviteToken) {

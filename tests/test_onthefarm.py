@@ -402,3 +402,40 @@ def test_tab_labels_guest_and_farm_scoping(app, owner):
     owner.put("/api/tab-labels", json={"labels": {"shop": "Farm One Store"}})
     other = signup(client(app), email="other@farm.test", farm_name="Second Farm")
     assert other.get("/api/tab-labels").get_json()["shop"] == "Leroy's feed/parts store"
+
+
+def test_timers_crud(owner):
+    assert owner.get("/api/timers").get_json() == []
+    r = owner.post("/api/timers", json={"label": "Check chicks", "minutes": 30})
+    assert r.status_code == 201
+    t = r.get_json()
+    assert t["label"] == "Check chicks" and t["target_at"] > 0
+    assert owner.get("/api/timers").get_json()[0]["id"] == t["id"]
+    r2 = owner.post("/api/timers", json={"at": "18:30"})
+    assert r2.status_code == 201
+    assert owner.post(f"/api/timers/{t['id']}/dismiss").status_code == 200
+    assert owner.get("/api/timers").get_json()[0]["id"] == r2.get_json()["id"]
+    assert owner.delete(f"/api/timers/{r2.get_json()['id']}").status_code == 200
+    assert owner.get("/api/timers").get_json() == []
+    assert owner.post("/api/timers/999/dismiss").status_code == 404
+    assert owner.delete("/api/timers/999").status_code == 404
+
+
+def test_timers_validation(owner):
+    assert owner.post("/api/timers", json={"minutes": 0}).status_code == 400
+    assert owner.post("/api/timers", json={"minutes": 20000}).status_code == 400
+    assert owner.post("/api/timers", json={"at": "nope"}).status_code == 400
+    assert owner.post("/api/timers", json={"at": "25:00"}).status_code == 400
+    assert owner.post("/api/timers", json={}).status_code == 400
+    assert owner.post("/api/timers", json={"minutes": "soon"}).status_code == 400
+
+
+def test_timers_guest_blocked_and_scoped(app, owner):
+    inv = owner.post("/api/invites", json={"role": "guest"}).get_json()
+    gst = signup(client(app), email="guest2@farm.test", invite=inv["token"])
+    assert gst.get("/api/timers").status_code == 403
+    assert gst.post("/api/timers", json={"minutes": 5}).status_code == 403
+    assert client(app).get("/api/timers").status_code == 401
+    owner.post("/api/timers", json={"label": "barn", "minutes": 10})
+    other = signup(client(app), email="timerother@farm.test", farm_name="Timer Farm")
+    assert other.get("/api/timers").get_json() == []

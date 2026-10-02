@@ -85,6 +85,10 @@ CREATE TABLE IF NOT EXISTS sales (
 CREATE TABLE IF NOT EXISTS tab_labels (
   farm_id TEXT NOT NULL, tab TEXT NOT NULL, label TEXT NOT NULL,
   PRIMARY KEY (farm_id, tab));
+CREATE TABLE IF NOT EXISTS timers (
+  id INTEGER PRIMARY KEY, farm_id TEXT NOT NULL, label TEXT NOT NULL,
+  target_at REAL NOT NULL, created_by TEXT NOT NULL, created_at REAL NOT NULL,
+  dismissed INTEGER NOT NULL DEFAULT 0);
 CREATE INDEX IF NOT EXISTS idx_tasks_farm ON tasks(farm_id);
 CREATE INDEX IF NOT EXISTS idx_photos_project ON photos(project_id);
 """
@@ -521,6 +525,80 @@ def put_tab_labels():
                        (g.user["farm_id"], tab))
     db.commit()
     return jsonify(_tab_labels(g.user["farm_id"]))
+
+
+# ---------------- timers ----------------
+
+@app.get("/api/timers")
+@login_required
+def get_timers():
+    db = _db()
+    now = time.time()
+    db.execute("DELETE FROM timers WHERE farm_id=? AND (dismissed=1 OR target_at < ?)",
+               (g.user["farm_id"], now - 86400))
+    db.commit()
+    rows = db.execute(
+        "SELECT id, label, target_at FROM timers"
+        " WHERE farm_id=? AND dismissed=0 ORDER BY target_at",
+        (g.user["farm_id"],)).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.post("/api/timers")
+@login_required
+def create_timer():
+    d = _body()
+    label = str(d.get("label") or "").strip()[:100] or "Timer"
+    now = time.time()
+    target = None
+    if d.get("minutes") is not None:
+        try:
+            minutes = float(d["minutes"])
+        except (TypeError, ValueError):
+            raise BadRequest("minutes must be a number")
+        if not 1 <= minutes <= 10080:
+            raise BadRequest("Timer must be between 1 minute and 7 days")
+        target = now + minutes * 60
+    elif d.get("at"):
+        m = re.match(r"^([01]?\d|2[0-3]):([0-5]\d)$", str(d["at"]).strip())
+        if not m:
+            raise BadRequest("Time must be HH:MM (24-hour, e.g. 18:30)")
+        target = dt.datetime.combine(dt.date.today(),
+                                     dt.time(int(m.group(1)), int(m.group(2)))).timestamp()
+        if target <= now + 30:
+            target += 86400  # already passed today -> tomorrow
+    else:
+        raise BadRequest("Give minutes or at (HH:MM)")
+    db = _db()
+    cur = db.execute("INSERT INTO timers (farm_id, label, target_at, created_by, created_at)"
+                     " VALUES (?,?,?,?,?)",
+                     (g.user["farm_id"], label, target, g.user["id"], now))
+    db.commit()
+    return jsonify(id=cur.lastrowid, label=label, target_at=target), 201
+
+
+@app.post("/api/timers/<int:tid>/dismiss")
+@login_required
+def dismiss_timer(tid):
+    db = _db()
+    cur = db.execute("UPDATE timers SET dismissed=1 WHERE id=? AND farm_id=?",
+                     (tid, g.user["farm_id"]))
+    db.commit()
+    if cur.rowcount == 0:
+        return jsonify(error="Timer not found"), 404
+    return jsonify(ok=True)
+
+
+@app.delete("/api/timers/<int:tid>")
+@login_required
+def delete_timer(tid):
+    db = _db()
+    cur = db.execute("DELETE FROM timers WHERE id=? AND farm_id=?",
+                     (tid, g.user["farm_id"]))
+    db.commit()
+    if cur.rowcount == 0:
+        return jsonify(error="Timer not found"), 404
+    return jsonify(ok=True)
 
 
 # ---------------- invites / members ----------------

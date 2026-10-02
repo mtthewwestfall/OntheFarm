@@ -11,7 +11,10 @@
 <body>
 <header class="top">
   <div class="brand">🌾 <span>OntheFarm</span> <small id="farmName"></small></div>
-  <button id="logoutBtn" class="ghost hidden">Sign out</button>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button id="bellBtn" class="ghost hidden" title="Timers & reminders">🔔<span id="bellBadge" style="display:none"></span></button>
+    <button id="logoutBtn" class="ghost hidden">Sign out</button>
+  </div>
 </header>
 
 <section id="auth" class="hidden">
