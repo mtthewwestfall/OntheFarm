@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OntheFarm</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌾</text></svg>">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">🌾 <span>OntheFarm</span> <small id="farmName"></small></div>
+  <button id="logoutBtn" class="ghost hidden">Sign out</button>
+</header>
+
+<section id="auth" class="auth hidden">
+  <div class="card authcard">
+    <h1>OntheFarm</h1>
+    <p class="muted" id="authBlurb">Crops, animals, feeding, tasks, money and build projects — in one place.</p>
+    <div id="inviteBanner" class="banner hidden"></div>
+    <div class="seg"><button data-mode="login" class="active">Sign in</button><button data-mode="signup">Create account</button></div>
+    <form id="authForm">
+      <label class="signup-only">Your name<input name="name" autocomplete="name"></label>
+      <label class="signup-only owner-only">Farm name<input name="farm_name" placeholder="e.g. Willow Creek Farm"></label>
+      <label>Email<input name="email" type="email" required autocomplete="email"></label>
+      <label>Password<input name="password" type="password" required minlength="8" autocomplete="current-password"></label>
+      <button type="submit" class="primary" id="authSubmit">Sign in</button>
+      <p class="error" id="authError"></p>
+    </form>
+  </div>
+</section>
+
+<section id="app" class="hidden">
+  <nav class="tabs" id="tabs"></nav>
+  <main id="view"></main>
+</section>
+
+<dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
+<div id="toast" class="toast hidden"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>
