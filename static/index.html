@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>OntheFarm</title>
+<title>OntheFarm — Run your whole farm from your pocket</title>
+<meta name="description" content="Animals, crops, feeding schedules, guest caretakers, egg sales and build projects — everything about your farm, in one place.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌾</text></svg>">
 <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -13,20 +14,66 @@
   <button id="logoutBtn" class="ghost hidden">Sign out</button>
 </header>
 
-<section id="auth" class="auth hidden">
-  <div class="card authcard">
-    <h1>OntheFarm</h1>
-    <p class="muted" id="authBlurb">Crops, animals, feeding, tasks, money and build projects — in one place.</p>
-    <div id="inviteBanner" class="banner hidden"></div>
-    <div class="seg"><button data-mode="login" class="active">Sign in</button><button data-mode="signup">Create account</button></div>
-    <form id="authForm">
-      <label class="signup-only">Your name<input name="name" autocomplete="name"></label>
-      <label class="signup-only owner-only">Farm name<input name="farm_name" placeholder="e.g. Willow Creek Farm"></label>
-      <label>Email<input name="email" type="email" required autocomplete="email"></label>
-      <label>Password<input name="password" type="password" required minlength="8" autocomplete="current-password"></label>
-      <button type="submit" class="primary" id="authSubmit">Sign in</button>
-      <p class="error" id="authError"></p>
-    </form>
+<section id="auth" class="hidden">
+  <div class="landing">
+    <div class="hero">
+      <span class="eyebrow">🌾 OntheFarm</span>
+      <h1>Run your <span class="accent">whole farm</span> from your pocket.</h1>
+      <p class="sub">Animals, crops, feeding schedules, guest caretakers, egg sales and build projects — everything about your farm, in one place.</p>
+      <div class="ctas">
+        <button class="primary big" onclick="document.querySelector('.seg [data-mode=signup]').click();document.getElementById('signin').scrollIntoView({behavior:'smooth'})">Create free account</button>
+        <button class="outline big" onclick="document.getElementById('signin').scrollIntoView({behavior:'smooth'})">Sign in</button>
+      </div>
+      <p class="trust">Free while we're testing · No credit card · Your farm stays yours</p>
+    </div>
+
+    <div class="feat">
+      <h2>Everything the farm needs</h2>
+      <p class="lede">One app for the daily work and the big picture.</p>
+      <div class="featgrid">
+        <div class="featcard"><div class="ico">🐄</div><h3>Animals &amp; crops</h3><p>Every animal's health, location and special instructions. Every crop's progress. All searchable in seconds.</p></div>
+        <div class="featcard"><div class="ico">🍽️</div><h3>Feeding schedules</h3><p>Feed types, amounts and times — plus a printable caretaker schedule for anyone filling in.</p></div>
+        <div class="featcard"><div class="ico">🤝</div><h3>Guest caretakers</h3><p>Free invite links. Sitters and family see read-only care instructions — nothing to install, nothing to break.</p></div>
+        <div class="featcard"><div class="ico">💰</div><h3>Gracie's sales corner</h3><p>Track egg sales, who's paid, and who still owes you. The farm stand, without the shoebox of receipts.</p></div>
+        <div class="featcard"><div class="ico">🎯</div><h3>Goals</h3><p>Project progress and money saved, with visual trackers that keep the whole family motivated.</p></div>
+        <div class="featcard"><div class="ico">🏗️</div><h3>Projects &amp; shop</h3><p>Upload site photos, generate finished-build visualizations, and search for free supplies nearby.</p></div>
+      </div>
+    </div>
+
+    <div class="how">
+      <h2>Up and running in minutes</h2>
+      <p class="lede">No manual. No training. Just your farm, organized.</p>
+      <div class="steps">
+        <div class="step"><span class="n">1</span><h3>Create your farm</h3><p>Sign up free and name your farm. Takes about thirty seconds.</p></div>
+        <div class="step"><span class="n">2</span><h3>Add animals &amp; schedules</h3><p>Chickens, goats, crops — add what you've got and when they eat.</p></div>
+        <div class="step"><span class="n">3</span><h3>Invite your people</h3><p>Send a free link to family or sitters. They see exactly what they need.</p></div>
+      </div>
+    </div>
+
+    <div class="authwrap" id="signin">
+      <div class="card authcard">
+        <h1>OntheFarm</h1>
+        <p class="muted" id="authBlurb">Crops, animals, feeding, tasks, money and build projects — in one place.</p>
+        <div id="inviteBanner" class="banner hidden"></div>
+        <div class="seg"><button data-mode="login" class="active">Sign in</button><button data-mode="signup">Create account</button></div>
+        <form id="authForm">
+          <label class="signup-only">Your name<input name="name" autocomplete="name"></label>
+          <label class="signup-only owner-only">Farm name<input name="farm_name" placeholder="e.g. Willow Creek Farm"></label>
+          <label>Email<input name="email" type="email" required autocomplete="email"></label>
+          <label>Password<input name="password" type="password" required minlength="8" autocomplete="current-password"></label>
+          <button type="submit" class="primary" id="authSubmit">Sign in</button>
+          <p class="error" id="authError"></p>
+        </form>
+      </div>
+    </div>
+
+    <div class="final">
+      <h2>Your farm, organized.</h2>
+      <p>Join free today — bring your animals, we'll handle the paperwork.</p>
+      <button class="primary big" onclick="document.querySelector('.seg [data-mode=signup]').click();document.getElementById('signin').scrollIntoView({behavior:'smooth'})">Create free account</button>
+    </div>
+
+    <footer class="landfoot">🌾 OntheFarm · Free during testing · Made for working farms</footer>
   </div>
 </section>
 
