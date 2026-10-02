@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>OntheFarm — Run your whole farm from your pocket</title>
-<meta name="description" content="Animals, crops, feeding schedules, guest caretakers, egg sales and build projects — everything about your farm, in one place.">
+<title>OntheFarm — Farm Management</title>
+<meta name="description" content="Manage animals, set feeding schedules, share instructions with guest caretakers, and track egg sales — all in one simple app.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌾</text></svg>">
 <link rel="stylesheet" href="/static/style.css">
 </head>
@@ -16,18 +16,77 @@
 
 <section id="auth" class="hidden">
   <div class="landing">
-    <div class="hero">
-      <span class="eyebrow">🌾 OntheFarm</span>
-      <h1>Run your <span class="accent">whole farm</span> from your pocket.</h1>
-      <p class="sub">Animals, crops, feeding schedules, guest caretakers, egg sales and build projects — everything about your farm, in one place.</p>
-      <div class="ctas">
-        <button class="primary big" onclick="document.querySelector('.seg [data-mode=signup]').click();document.getElementById('signin').scrollIntoView({behavior:'smooth'})">Create free account</button>
-        <button class="outline big" onclick="document.getElementById('signin').scrollIntoView({behavior:'smooth'})">Sign in</button>
+
+    <nav class="landnav">
+      <div class="landnav-inner">
+        <div class="landlogo">🌾 <span>OntheFarm</span></div>
+        <div class="landlinks">
+          <a href="#features">Features</a><span class="dot">·</span>
+          <a href="#pricing">Pricing</a><span class="dot">·</span>
+          <a href="#how">Resources</a><span class="dot">·</span>
+          <a href="#signin">Contact</a>
+        </div>
+        <button class="primary small-cta" onclick="document.querySelector('.seg [data-mode=signup]').click();document.getElementById('signin').scrollIntoView({behavior:'smooth'})">Start free</button>
       </div>
-      <p class="trust">Free while we're testing · No credit card · Your farm stays yours</p>
+    </nav>
+
+    <div class="hero2">
+      <div class="hero2-left">
+        <h1>Run your whole farm<br>from your pocket</h1>
+        <p class="sub">Manage animals, set feeding schedules, share instructions with guest caretakers, and track egg sales — all in one simple app.</p>
+        <button class="primary hero-cta" onclick="document.querySelector('.seg [data-mode=signup]').click();document.getElementById('signin').scrollIntoView({behavior:'smooth'})">Start free →</button>
+        <div class="pills">
+          <span class="pill">🐄 Animals</span>
+          <span class="pill">⏰ Feeding Schedules</span>
+          <span class="pill">👥 Caretaker Access</span>
+          <span class="pill">🥚 Egg Sales</span>
+        </div>
+        <div class="polas">
+          <figure class="pola">
+            <img src="/static/img/eggs.webp" alt="Fresh eggs in a basket">
+            <figcaption>Fresh eggs → Sales tracked</figcaption>
+          </figure>
+          <figure class="pola">
+            <img src="/static/img/barn.webp" alt="Red barn at golden hour">
+            <figcaption>Barn overview</figcaption>
+          </figure>
+        </div>
+      </div>
+      <div class="hero2-right">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-head">
+            <span>My Farm</span>
+            <span class="phone-ico">👤</span>
+          </div>
+          <div class="phone-body">
+            <p class="phone-sec">Animals</p>
+            <div class="phone-card">
+              <div class="phone-emoji">🐔</div>
+              <div><b>Chickens</b><span>12 hens</span>
+              <small>Health: Good · Eggs today: 8<br>Feeding 7:00 AM ✓ Completed</small></div>
+            </div>
+            <div class="phone-card">
+              <div class="phone-emoji">🐄</div>
+              <div><b>Cows</b><span>3 cows</span>
+              <small>Health: Good · Feed: 6:00 PM Scheduled</small></div>
+            </div>
+            <div class="phone-card">
+              <div class="phone-emoji">🐑</div>
+              <div><b>Sheep</b><span>5 sheep</span>
+              <small>Health: Checked · Note for caretaker: Hay in shed</small></div>
+            </div>
+            <p class="phone-sec">Quick Actions</p>
+            <div class="phone-actions">
+              <button class="primary">Add Feed Log</button>
+              <button>Share with Caretaker</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="feat">
+    <div class="feat" id="features">
       <h2>Everything the farm needs</h2>
       <p class="lede">One app for the daily work and the big picture.</p>
       <div class="featgrid">
@@ -40,13 +99,23 @@
       </div>
     </div>
 
-    <div class="how">
+    <div class="how" id="how">
       <h2>Up and running in minutes</h2>
       <p class="lede">No manual. No training. Just your farm, organized.</p>
       <div class="steps">
         <div class="step"><span class="n">1</span><h3>Create your farm</h3><p>Sign up free and name your farm. Takes about thirty seconds.</p></div>
         <div class="step"><span class="n">2</span><h3>Add animals &amp; schedules</h3><p>Chickens, goats, crops — add what you've got and when they eat.</p></div>
         <div class="step"><span class="n">3</span><h3>Invite your people</h3><p>Send a free link to family or sitters. They see exactly what they need.</p></div>
+      </div>
+    </div>
+
+    <div class="pricing" id="pricing">
+      <h2>Simple pricing</h2>
+      <p class="lede">Free while we're testing. That's it.</p>
+      <div class="pricecard">
+        <div class="price">Free</div>
+        <p>Every feature. Every animal. No credit card, no catch — just help us make it great.</p>
+        <button class="primary big" onclick="document.querySelector('.seg [data-mode=signup]').click();document.getElementById('signin').scrollIntoView({behavior:'smooth'})">Start free →</button>
       </div>
     </div>
 
@@ -65,12 +134,6 @@
           <p class="error" id="authError"></p>
         </form>
       </div>
-    </div>
-
-    <div class="final">
-      <h2>Your farm, organized.</h2>
-      <p>Join free today — bring your animals, we'll handle the paperwork.</p>
-      <button class="primary big" onclick="document.querySelector('.seg [data-mode=signup]').click();document.getElementById('signin').scrollIntoView({behavior:'smooth'})">Create free account</button>
     </div>
 
     <footer class="landfoot">🌾 OntheFarm · Free during testing · Made for working farms</footer>
