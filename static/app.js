@@ -26,7 +26,7 @@ const S = {me: null, tab: localStorage.getItem("otf_tab") || "tasks", taskFilter
 
 const TABS = [
   ["tasks", "Tasks"], ["crops", "Crops"], ["animals", "Animals"], ["feeding", "Feeding"],
-  ["expenses", "Expenses"], ["sales", "Sales"], ["goals", "Goals"], ["projects", "Projects"],
+  ["expenses", "Expenses"], ["sales", "Gracie's sales corner"], ["goals", "Goals"], ["projects", "Projects"],
   ["shop", "Shop"], ["offthefarm", "OfftheFARM"], ["farm", "Farm & Members"],
 ];
 const isGuest = () => S.me && S.me.user.role === "guest";
@@ -266,7 +266,7 @@ const VIEWS = {
     const shown = items.filter((s) => f === "all" || s.status === f);
     const stat = (k, p) => `<div class="stat"><div class="k">${k}</div><div class="v">${money(p.total)}</div>
       <div class="s">${money(p.paid)} paid · <span class="${p.pending ? "overdue" : ""}">${money(p.pending)} pending</span> · ${p.count} sale${p.count === 1 ? "" : "s"}</div></div>`;
-    v.innerHTML = `<div class="bar"><h2>Sales</h2>${addBtn("Sale", "sales")}</div>
+    v.innerHTML = `<div class="bar"><h2>Gracie's sales corner</h2>${addBtn("Sale", "sales")}</div>
       <div class="stats">${stat("This week", sum.week)}${stat("This month", sum.month)}${stat("This year", sum.year)}
       <div class="stat"><div class="k">Still owed</div><div class="v ${sum.owed_total ? "overdue" : ""}">${money(sum.owed_total)}</div><div class="s">${sum.owed.length} customer${sum.owed.length === 1 ? "" : "s"}</div></div></div>
       ${sum.owed.length ? `<div class="card"><b>Who still owes</b><table class="list" style="margin-top:8px"><thead><tr><th>Customer</th><th>Owes</th><th>Sales</th><th>Oldest</th></tr></thead><tbody>
