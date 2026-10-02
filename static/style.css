@@ -134,3 +134,6 @@ textarea{min-height:80px;resize:vertical}
   .landlinks{display:none}
 }
 @media (max-width:600px){.row{grid-template-columns:1fr}table.list th:nth-child(n+5),table.list td:nth-child(n+5):not(.actions){display:none}.polas{flex-wrap:wrap}}
+
+/* hide the app bar on the landing page (logged out) to avoid a double header */
+body:has(#auth:not(.hidden)) .top{display:none}
