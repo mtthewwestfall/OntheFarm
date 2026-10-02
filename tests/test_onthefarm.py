@@ -289,6 +289,34 @@ def test_visualize_ai_error(owner, monkeypatch):
     assert r.status_code == 502 and r.get_json()["error"] == "down"
 
 
+def test_visualize_capped_at_two_per_account(owner, monkeypatch):
+    monkeypatch.setattr(server, "generate_visualization",
+                        lambda *a: (b"RENDER", "image/png"))
+    pid = owner.post("/api/projects", json={"name": "Barn"}).get_json()["id"]
+    owner.post(f"/api/projects/{pid}/photos", json={"data": PNG_URL})
+    assert owner.post(f"/api/projects/{pid}/visualize", json={}).status_code == 201
+    assert owner.post(f"/api/projects/{pid}/visualize", json={}).status_code == 201
+    r = owner.post(f"/api/projects/{pid}/visualize", json={})
+    assert r.status_code == 403
+    assert "2 free" in r.get_json()["error"]
+
+
+def test_visualize_cap_is_per_account(owner, app, monkeypatch):
+    # A second account on the same farm gets its own 2 visualizations.
+    monkeypatch.setattr(server, "generate_visualization",
+                        lambda *a: (b"RENDER", "image/png"))
+    pid = owner.post("/api/projects", json={"name": "Barn"}).get_json()["id"]
+    owner.post(f"/api/projects/{pid}/photos", json={"data": PNG_URL})
+    assert owner.post(f"/api/projects/{pid}/visualize", json={}).status_code == 201
+    assert owner.post(f"/api/projects/{pid}/visualize", json={}).status_code == 201
+    assert owner.post(f"/api/projects/{pid}/visualize", json={}).status_code == 403
+    inv = owner.post("/api/invites", json={"email": "sitter@farm.test"}).get_json()
+    m = signup(client(app), email="sitter@farm.test", invite=inv["token"])
+    assert m.post(f"/api/projects/{pid}/visualize", json={}).status_code == 201
+    assert m.post(f"/api/projects/{pid}/visualize", json={}).status_code == 201
+    assert m.post(f"/api/projects/{pid}/visualize", json={}).status_code == 403
+
+
 def test_advice_given_exactly_once(owner, monkeypatch):
     calls = []
     monkeypatch.setattr(server, "generate_advice", lambda prompt, image: calls.append(prompt) or "Use gravel pad")

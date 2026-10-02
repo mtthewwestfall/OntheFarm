@@ -72,7 +72,8 @@ CREATE TABLE IF NOT EXISTS feedings (
 CREATE TABLE IF NOT EXISTS photos (
   id INTEGER PRIMARY KEY, farm_id TEXT NOT NULL, project_id INTEGER NOT NULL,
   kind TEXT NOT NULL, mime TEXT NOT NULL, data BLOB NOT NULL,
-  prompt TEXT DEFAULT '', source_photo_id INTEGER, created_at REAL);
+  prompt TEXT DEFAULT '', source_photo_id INTEGER, created_at REAL,
+  generated_by TEXT DEFAULT '');
 CREATE TABLE IF NOT EXISTS goals (
   id INTEGER PRIMARY KEY, farm_id TEXT NOT NULL, title TEXT NOT NULL,
   kind TEXT NOT NULL DEFAULT 'progress', project_id INTEGER,
@@ -185,6 +186,9 @@ def init_db():
         os.makedirs(d, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.executescript(SCHEMA)
+    cols = [r[1] for r in conn.execute("PRAGMA table_info(photos)").fetchall()]
+    if "generated_by" not in cols:
+        conn.execute("ALTER TABLE photos ADD COLUMN generated_by TEXT DEFAULT ''")
     conn.commit()
     conn.close()
 
@@ -1110,6 +1114,13 @@ def visualize(pid):
     p = _project(pid)
     if not p:
         return jsonify(error="Not found"), 404
+    # Two visualizations per account, ever. Each render is a paid
+    # image-generation call, so the free tier stays bounded.
+    used = _db().execute(
+        "SELECT COUNT(*) FROM photos WHERE kind='render' AND generated_by=?",
+        (g.user["id"],)).fetchone()[0]
+    if used >= 2:
+        return jsonify(error="You've used your 2 free project visualizations."), 403
     d = _body()
     photo_id = d.get("photo_id")
     q = "SELECT * FROM photos WHERE project_id=? AND farm_id=? AND kind='site'"
@@ -1128,8 +1139,9 @@ def visualize(pid):
         return jsonify(error=str(e)), 502
     cur = _db().execute(
         "INSERT INTO photos (farm_id, project_id, kind, mime, data, prompt, source_photo_id,"
-        " created_at) VALUES (?,?,?,?,?,?,?,?)",
-        (g.user["farm_id"], pid, "render", mime, img, extra, src["id"], time.time()))
+        " created_at, generated_by) VALUES (?,?,?,?,?,?,?,?,?)",
+        (g.user["farm_id"], pid, "render", mime, img, extra, src["id"], time.time(),
+         g.user["id"]))
     _db().commit()
     r = _db().execute("SELECT * FROM photos WHERE id=?", (cur.lastrowid,)).fetchone()
     return jsonify(_photo_meta(r)), 201

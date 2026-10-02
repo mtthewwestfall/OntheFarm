@@ -493,7 +493,7 @@ async function projectDetail(v, pid) {
         toast("Generating — this can take up to a minute…");
         await api(`/api/projects/${p.id}/visualize`, {method: "POST", body: {photo_id: Number(b.dataset.vis), details: f.details}});
         toast("Visualization ready");
-      }, `<p class="muted">We'll draw the finished build into this photo using your plan.</p>`);
+      }, `<p class="muted">We'll draw the finished build into this photo using your plan. (2 free visualizations per account)</p>`);
   });
   const go = $("#adviceGo");
   if (go) {
